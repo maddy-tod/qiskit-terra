@@ -73,6 +73,8 @@ class DAGCircuit:
         # Map of creg name to ClassicalRegister object
         self.cregs = OrderedDict()
 
+        self.gate_definitions = OrderedDict()
+
     def get_qubits(self):
         """Deprecated. Use qubits()."""
         warnings.warn('The method get_qubits() is being replaced by qubits()',

@@ -33,7 +33,6 @@ def dag_to_circuit(dag):
 
     name = dag.name or None
     circuit = QuantumCircuit(*qregs.values(), *cregs.values(), name=name)
-
     graph = dag.multi_graph
     for node in dag.node_nums_in_topological_order():
         n = graph.nodes[node]
@@ -63,4 +62,6 @@ def dag_to_circuit(dag):
                 result = instr_method(*params, *qubits, *clbits)
             if 'condition' in n and n['condition']:
                 result.c_if(*n['condition'])
+
+    circuit.definitions = dag.gate_definitions
     return circuit

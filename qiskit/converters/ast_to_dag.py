@@ -213,6 +213,7 @@ class AstInterpreter:
 
     def _process_node(self, node):
         """Carry out the action associated with a node."""
+
         if node.type == "program":
             self._process_children(node)
 
@@ -301,6 +302,11 @@ class AstInterpreter:
             raise QiskitError("internal error: undefined node type",
                               node.type, "line=%s" % node.line,
                               "file=%s" % node.file)
+
+        for gate in self.gates.keys():
+            if gate not in self.dag.gate_definitions:
+                self.dag.gate_definitions[gate] = self.gates[gate]
+
         return None
 
     def _create_dag_op(self, name, params, qargs):
