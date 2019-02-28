@@ -17,7 +17,7 @@ import sympy
 from .exceptions import VisualizationError
 
 
-class DrawElement():
+class DrawElement:
     """ An element is an instruction or an operation that need to be drawn."""
 
     def __init__(self, label=None):
@@ -25,56 +25,51 @@ class DrawElement():
         self.label = self.mid_content = label
         self.top_format = self.mid_format = self.bot_format = "%s"
         self.top_connect = self.bot_connect = " "
-        self.top_pad = self._mid_padding = self.bot_pad = " "
+        self.top_pad = self.bot_pad = " "
+        self.mid_pad = '─'
         self.bot_connector = {}
         self.top_connector = {}
-        self.right_fill = self.left_fill = 0
+        self.layer_width = None
 
     @property
     def top(self):
         """ Constructs the top line of the element"""
-        ret = self.top_format % self.top_connect.center(
-            self.width - self.left_fill - self.right_fill, self.top_pad)
-        if self.right_fill:
-            ret = ret.ljust(self.right_fill, self.top_pad)
-        if self.left_fill:
-            ret = ret.rjust(self.left_fill, self.top_pad)
+        ret = self.top_format % (self.top_connect * self.width)
+
+        if self.layer_width:
+            ret = ret.center(self.layer_width, ' ')
 
         return ret
 
     @property
     def mid(self):
         """ Constructs the middle line of the element"""
-        ret = self.mid_format % self.mid_content.center(
-            self.width - self.left_fill - self.right_fill, self._mid_padding)
-        if self.right_fill:
-            ret = ret.ljust(self.right_fill, self._mid_padding)
-        if self.left_fill:
-            ret = ret.rjust(self.left_fill, self._mid_padding)
+        ret = self.mid_format % self.mid_content
+
+        if self.layer_width:
+            ret = ret.center(self.layer_width, self.mid_pad)
+
         return ret
 
     @property
     def bot(self):
         """ Constructs the bottom line of the element"""
-        ret = self.bot_format % self.bot_connect.center(
-            self.width - self.left_fill - self.right_fill, self.bot_pad)
-        if self.right_fill:
-            ret = ret.ljust(self.right_fill, self.bot_pad)
-        if self.left_fill:
-            ret = ret.rjust(self.left_fill, self.bot_pad)
+        ret = self.bot_format % (self.bot_connect * self.width)
+
+        if self.layer_width:
+            ret = ret.center(self.layer_width, ' ')
 
         return ret
 
     @property
     def length(self):
         """ Returns the length of the element, including the box around."""
-
         return max(len(self.top), len(self.mid), len(self.bot))
 
     @length.setter
     def length(self, value):
         """ Adjusts width so the length fits."""
-        self.width = value - max(
+        self._width = value - max(
             [len(getattr(self, i) % '') for i in ["bot_format", "mid_format", "top_format"]])
 
     @property
@@ -122,6 +117,7 @@ class BoxOnClWire(DrawElement):
         self.top_pad = self.bot_pad = '─'
         self.top_connect = top_connect
         self.bot_connect = bot_connect
+        self.mid_pad = '═'
         self.mid_content = label
 
 
@@ -157,7 +153,7 @@ class MeasureTo(DrawElement):
         self.top_connect = " ║ "
         self.mid_content = "═╩═"
         self.bot_connect = "   "
-        self._mid_padding = "═"
+        self.mid_pad = "═"
 
 
 class MeasureFrom(BoxOnQuWire):
@@ -175,7 +171,7 @@ class MeasureFrom(BoxOnQuWire):
         self.bot_connect = "└╥┘"
 
         self.top_pad = self.bot_pad = " "
-        self._mid_padding = '─'
+        self.mid_pad = '─'
 
 
 class MultiBox(DrawElement):
@@ -251,6 +247,7 @@ class BoxOnClWireMid(MultiBox, BoxOnClWire):
 
     def __init__(self, label, input_length, order):
         super().__init__(label)
+        print("label : ", label)
         self.mid_content = label
         self.top_format = "│ %s │"
         self.bot_format = "│ %s │"
@@ -283,7 +280,7 @@ class DirectOnQuWire(DrawElement):
         self.top_format = ' %s '
         self.mid_format = '─%s─'
         self.bot_format = ' %s '
-        self._mid_padding = '─'
+        self.mid_pad = '─'
         self.top_connector = {"│": '│'}
         self.bot_connector = {"│": '│'}
 
@@ -341,7 +338,7 @@ class EmptyWire(DrawElement):
 
     def __init__(self, wire):
         super().__init__(wire)
-        self._mid_padding = wire
+        self.mid_pad = wire
 
     @staticmethod
     def fillup_layer(layer, first_clbit):
@@ -487,42 +484,42 @@ class TextDrawing():
         if not line_length:
             line_length = self.line_length
 
-        layer_groups = [[]]
+        row_groups = [[]]
         rest_of_the_line = line_length
-        for layerno, layer in enumerate(layers):
+        for layer in layers:
             # Replace the Nones with EmptyWire
-            layers[layerno] = EmptyWire.fillup_layer(layer, noqubits)
+            layer = EmptyWire.fillup_layer(layer, noqubits)
 
             TextDrawing.normalize_width(layer)
 
             if line_length == -1:
                 # Do not use pagination (aka line breaking. aka ignore line_length).
-                layer_groups[-1].append(layer)
+                row_groups[-1].append(layer)
                 continue
 
             # chop the layer to the line_length (pager)
-            layer_length = layers[layerno][0].length
+            layer_length = layer[0].length
 
             if layer_length < rest_of_the_line:
-                layer_groups[-1].append(layer)
+                row_groups[-1].append(layer)
                 rest_of_the_line -= layer_length
             else:
-                layer_groups[-1].append(BreakWire.fillup_layer(len(layer), '»'))
+                row_groups[-1].append(BreakWire.fillup_layer(len(layer), '»'))
 
                 # New group
-                layer_groups.append([BreakWire.fillup_layer(len(layer), '«')])
-                rest_of_the_line = line_length - layer_groups[-1][-1][0].length
+                row_groups.append([BreakWire.fillup_layer(len(layer), '«')])
+                rest_of_the_line = line_length - row_groups[-1][-1][0].length
 
-                layer_groups[-1].append(
+                row_groups[-1].append(
                     InputWire.fillup_layer(self.wire_names(with_initial_value=False)))
-                rest_of_the_line -= layer_groups[-1][-1][0].length
+                rest_of_the_line -= row_groups[-1][-1][0].length
 
-                layer_groups[-1].append(layer)
-                rest_of_the_line -= layer_groups[-1][-1][0].length
+                row_groups[-1].append(layer)
+                rest_of_the_line -= row_groups[-1][-1][0].length
 
         lines = []
-        for layer_group in layer_groups:
-            wires = [i for i in zip(*layer_group)]
+        for row in row_groups:
+            wires = [i for i in zip(*row)]
             lines += TextDrawing.draw_wires(wires)
 
         return lines
@@ -562,6 +559,8 @@ class TextDrawing():
         lines = []
         bot_line = None
         for wire in wires:
+            print('wire : ', [type(w) for w in wire])
+
             # TOP
             top_line = ''
             for instruction in wire:
@@ -664,8 +663,9 @@ class TextDrawing():
         """
         instructions = [instruction for instruction in filter(lambda x: x is not None, layer)]
         longest = max([instruction.length for instruction in instructions])
+        print("lengths : ", [instruction.length for instruction in instructions])
         for instruction in instructions:
-            instruction.length = longest
+            instruction.layer_width = longest
 
     def _instruction_to_gate(self, instruction, layer):
         """ Convert an instruction into its corresponding Gate object, and establish
