@@ -14,6 +14,7 @@ Visualization function for DAG circuit representation.
 import sys
 import copy
 from .exceptions import VisualizationError
+import networkx as nx
 
 
 def dag_drawer(dag, scale=0.7, filename=None, style='color'):
@@ -51,23 +52,26 @@ def dag_drawer(dag, scale=0.7, filename=None, style='color'):
     G = copy.deepcopy(dag.multi_graph)  # don't modify the original graph attributes
     G.graph['dpi'] = 100 * scale
 
+
+
     if style == 'plain':
         pass
     elif style == 'color':
         for node in G.nodes:
+            print("node : ", node)
             n = G.nodes[node]
-            if n['type'] == 'op':
-                n['label'] = n['name']
+            if node.type == 'op':
+                n['label'] = node.name
                 n['color'] = 'blue'
                 n['style'] = 'filled'
                 n['fillcolor'] = 'lightblue'
-            if n['type'] == 'in':
-                n['label'] = n['name']
+            if node.type == 'in':
+                n['label'] = node.name
                 n['color'] = 'black'
                 n['style'] = 'filled'
                 n['fillcolor'] = 'green'
-            if n['type'] == 'out':
-                n['label'] = n['name']
+            if node.type == 'out':
+                n['label'] = node.name
                 n['color'] = 'black'
                 n['style'] = 'filled'
                 n['fillcolor'] = 'red'
@@ -84,4 +88,5 @@ def dag_drawer(dag, scale=0.7, filename=None, style='color'):
     else:
         show = True
 
+    print("="*50)
     return nxpd.draw(G, filename=filename, show=show)

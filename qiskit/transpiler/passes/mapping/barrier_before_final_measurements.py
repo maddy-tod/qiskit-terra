@@ -55,7 +55,7 @@ class BarrierBeforeFinalMeasurements(TransformationPass):
         new_barrier_id = barrier_layer.apply_operation_back(Barrier(qubits=final_qubits))
 
         # Preserve order of final ops collected earlier from the original DAG.
-        ordered_node_ids = [node_id for node_id in dag.node_nums_in_topological_order()
+        ordered_node_ids = [node_id for node_id in dag.nodes_in_topological_order()
                             if node_id in set(final_ops)]
         ordered_final_nodes = [dag.multi_graph.node[node] for node in ordered_node_ids]
 

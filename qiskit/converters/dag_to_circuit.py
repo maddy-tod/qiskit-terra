@@ -35,7 +35,7 @@ def dag_to_circuit(dag):
     circuit = QuantumCircuit(*qregs.values(), *cregs.values(), name=name)
 
     graph = dag.multi_graph
-    for node in dag.node_nums_in_topological_order():
+    for node in dag.nodes_in_topological_order():
         n = graph.nodes[node]
         if n['type'] == 'op':
             if n['op'].name == 'U':

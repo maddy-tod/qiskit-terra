@@ -40,7 +40,7 @@ class CommutationAnalysis(AnalysisPass):
         Run the pass on the DAG, and write the discovered commutation relations
         into the property_set.
         """
-        tops_node = list(dag.node_nums_in_topological_order())
+        tops_node = list(dag.nodes_in_topological_order())
 
         # Initiation of the node_order
         for num, node in enumerate(tops_node):
