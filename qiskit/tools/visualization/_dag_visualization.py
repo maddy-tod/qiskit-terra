@@ -52,26 +52,21 @@ def dag_drawer(dag, scale=0.7, filename=None, style='color'):
     G = copy.deepcopy(dag.multi_graph)  # don't modify the original graph attributes
     G.graph['dpi'] = 100 * scale
 
-
-
     if style == 'plain':
         pass
     elif style == 'color':
         for node in G.nodes:
-            print("node : ", node)
             n = G.nodes[node]
+            n['label'] = node.name
             if node.type == 'op':
-                n['label'] = node.name
                 n['color'] = 'blue'
                 n['style'] = 'filled'
                 n['fillcolor'] = 'lightblue'
             if node.type == 'in':
-                n['label'] = node.name
                 n['color'] = 'black'
                 n['style'] = 'filled'
                 n['fillcolor'] = 'green'
             if node.type == 'out':
-                n['label'] = node.name
                 n['color'] = 'black'
                 n['style'] = 'filled'
                 n['fillcolor'] = 'red'
@@ -80,7 +75,6 @@ def dag_drawer(dag, scale=0.7, filename=None, style='color'):
     else:
         raise VisualizationError("Unrecognized style for the dag_drawer.")
 
-    show = nxpd.nxpdParams['show']
     if filename:
         show = False
     elif ('ipykernel' in sys.modules) and ('spyder' not in sys.modules):
@@ -88,5 +82,4 @@ def dag_drawer(dag, scale=0.7, filename=None, style='color'):
     else:
         show = True
 
-    print("="*50)
     return nxpd.draw(G, filename=filename, show=show)

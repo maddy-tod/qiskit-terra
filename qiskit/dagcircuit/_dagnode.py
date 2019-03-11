@@ -69,6 +69,7 @@ class DAGNode:
         return self.data_dict.get('wire')
 
     def __getitem__(self, x):
+        #print(type(x))
         return getattr(self, x)
 
     def __setitem__(self, key, value):
@@ -119,4 +120,6 @@ class DAGNode:
         return hash(id(self))
 
     def __str__(self):
-        return str(self.data_dict)
+        # TODO is this used anywhere other than in DAG drawing?
+        # needs to be unique as it is what pydot uses to distinguish nodes
+        return str(id(self))

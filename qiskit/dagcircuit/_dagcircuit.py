@@ -128,31 +128,31 @@ class DAGCircuit:
             reg.name = newname
             self.qregs[newname] = reg
             self.qregs.pop(regname, None)
-        # n node d = data
-        for _, d in self.multi_graph.nodes(data=True):
-            if d["type"] == "in" or d["type"] == "out":
-                if regname in d["name"]:
-                    d["name"] = re.sub(regname, newname, d["name"])
-            elif d["type"] == "op":
+
+        for node in self.multi_graph.nodes():
+            if node["type"] == "in" or node["type"] == "out":
+                if regname in node["name"]:
+                    node["name"] = re.sub(regname, newname, node["name"])
+            elif node["type"] == "op":
                 qa = []
-                for a in d["qargs"]:
+                for a in node["qargs"]:
                     if a[0] == regname:
                         a = (newname, a[1])
                     qa.append(a)
-                d["qargs"] = qa
+                node["qargs"] = qa
                 ca = []
-                for a in d["cargs"]:
+                for a in node["cargs"]:
                     if a[0] == regname:
                         a = (newname, a[1])
                     ca.append(a)
-                d["cargs"] = ca
-                if d["condition"] is not None:
-                    if d["condition"][0] == regname:
-                        d["condition"] = (newname, d["condition"][1])
+                node["cargs"] = ca
+                if node["condition"] is not None:
+                    if node["condition"][0] == regname:
+                        node["condition"] = (newname, node["condition"][1])
         # eX = edge, d= data
-        for _, _, d in self.multi_graph.edges(data=True):
-            if regname in d["name"]:
-                d["name"] = re.sub(regname, newname, d["name"])
+        for _, _, node in self.multi_graph.edges(data=True):
+            if regname in node["name"]:
+                node["name"] = re.sub(regname, newname, node["name"])
 
     def remove_all_ops_named(self, opname):
         """Remove all operation nodes with the given name."""
@@ -374,10 +374,10 @@ class DAGCircuit:
             ie = list(self.multi_graph.successors(self.input_map[q]))
             if len(ie) != 1:
                 raise DAGCircuitError("input node has multiple out-edges")
-            self.multi_graph.add_edge(self._max_node_id, ie[0],
+            self.multi_graph.add_edge(self.id_to_node[self._max_node_id], ie[0],
                                       name="%s[%s]" % (q[0].name, q[1]), wire=q)
             self.multi_graph.remove_edge(self.input_map[q], ie[0])
-            self.multi_graph.add_edge(self.input_map[q], self._max_node_id,
+            self.multi_graph.add_edge(self.input_map[q], self.id_to_node[self._max_node_id],
                                       name="%s[%s]" % (q[0].name, q[1]), wire=q)
 
         return self._max_node_id
@@ -749,12 +749,22 @@ class DAGCircuit:
                 if len(list(self.multi_graph.predecessors(self.output_map[w]))) != 1:
                     raise DAGCircuitError("too many predecessors for %s[%d] "
                                           "output node" % (w[0], w[1]))
+
         return full_pred_map, full_succ_map
 
     def __eq__(self, other):
-        return nx.is_isomorphic(self.multi_graph, other.multi_graph,
-                                node_match=lambda x, y:
-                                x == y)
+
+        if nx.is_isomorphic(self.multi_graph, other.multi_graph):
+            own_nodes = self.nodes_in_topological_order()
+            other_nodes = other.nodes_in_topological_order()
+
+            for index, own_node in enumerate(own_nodes):
+                if own_node != other_nodes[index]:
+                    return False
+
+            return True
+
+        return False
 
     def nodes_in_topological_order(self):
         """
@@ -811,12 +821,12 @@ class DAGCircuit:
                                                       for i in s])}
                     self._check_wiremap_validity(wire_map, wires,
                                                  self.input_map)
-                    pred_map, succ_map = self._make_pred_succ_maps(n)
+                    pred_map, succ_map = self._make_pred_succ_maps(nd)
                     full_pred_map, full_succ_map = \
                         self._full_pred_succ_maps(pred_map, succ_map,
                                                   input_circuit, wire_map)
                     # Now that we know the connections, delete node
-                    self.multi_graph.remove_node(n)
+                    self.multi_graph.remove_node(nd)
                     # Iterate over nodes of input_circuit
                     for m in nx.topological_sort(input_circuit.multi_graph):
                         md = input_circuit.multi_graph.node[m]
@@ -834,10 +844,10 @@ class DAGCircuit:
                             al = [m_qargs, all_cbits]
                             for q in itertools.chain(*al):
                                 self.multi_graph.add_edge(full_pred_map[q],
-                                                          self._max_node_id,
+                                                          self.id_to_node[self._max_node_id],
                                                           name="%s[%s]" % (q[0].name, q[1]),
                                                           wire=q)
-                                full_pred_map[q] = copy.copy(self._max_node_id)
+                                full_pred_map[q] = copy.copy(self.id_to_node[self._max_node_id])
                     # Connect all predecessors and successors, and remove
                     # residual edges between input and output nodes
                     for w in full_pred_map:
@@ -938,6 +948,7 @@ class DAGCircuit:
                                                                  input_dag, wire_map)
         # Now that we know the connections, delete node
         self.multi_graph.remove_node(node)
+
         # Iterate over nodes of input_circuit
         for node in nx.topological_sort(input_dag.multi_graph):
             if node["type"] == "op":
@@ -958,7 +969,8 @@ class DAGCircuit:
                                               self.id_to_node[self._max_node_id],
                                               name="%s[%s]" % (q[0].name, q[1]),
                                               wire=q)
-                    full_pred_map[q] = copy.copy(self.id_to_node[self._max_node_id])
+                    full_pred_map[q] = self.id_to_node[self._max_node_id]#copy.copy(self.id_to_node[self._max_node_id])
+
         # Connect all predecessors and successors, and remove
         # residual edges between input and output nodes
         for w in full_pred_map:
@@ -1296,6 +1308,7 @@ class DAGCircuit:
             layer.multi_graph.add_nodes_from(nodes)
 
         for graph_layer in graph_layers:
+
             # Get the op nodes from the layer, removing any input and output nodes.
             op_nodes = [node for node in graph_layer if node.type == "op"]
 
@@ -1328,7 +1341,7 @@ class DAGCircuit:
                        + op_node.cargs + op_node.qargs
                 arg_ids = (self.input_map[(arg[0], arg[1])] for arg in args)
                 for arg_id in arg_ids:
-                    wires[arg_id], wires[op_node._node_id] = op_node._node_id, wires[arg_id]
+                    wires[arg_id], wires[op_node] = op_node, wires[arg_id]
 
             # Add wiring to/from the operations and between unused inputs & outputs.
             new_layer.multi_graph.add_edges_from(wires.items())
@@ -1416,8 +1429,8 @@ class DAGCircuit:
                 nodes_seen[node] = True
                 s = list(self.multi_graph.successors(node))
                 while len(s) == 1 and \
-                        self.multi_graph.node[s[0]]["type"] == "op" and \
-                        self.multi_graph.node[s[0]]["name"] in namelist:
+                        s[0].type == "op" and \
+                        s[0].name in namelist:
                     group.append(s[0])
                     nodes_seen[s[0]] = True
                     s = list(self.multi_graph.successors(s[0]))

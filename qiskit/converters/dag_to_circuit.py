@@ -36,31 +36,30 @@ def dag_to_circuit(dag):
 
     graph = dag.multi_graph
     for node in dag.nodes_in_topological_order():
-        n = graph.nodes[node]
-        if n['type'] == 'op':
-            if n['op'].name == 'U':
+        if node['type'] == 'op':
+            if node['op'].name == 'U':
                 name = 'u_base'
-            elif n['op'].name == 'CX':
+            elif node['op'].name == 'CX':
                 name = 'cx_base'
-            elif n['op'].name == 'id':
+            elif node['op'].name == 'id':
                 name = 'iden'
             else:
-                name = n['op'].name
+                name = node['op'].name
 
             instr_method = getattr(circuit, name)
             qubits = []
-            for qubit in n['qargs']:
+            for qubit in node['qargs']:
                 qubits.append(qregs[qubit[0].name][qubit[1]])
 
             clbits = []
-            for clbit in n['cargs']:
+            for clbit in node['cargs']:
                 clbits.append(cregs[clbit[0].name][clbit[1]])
-            params = n['op'].params
+            params = node['op'].params
 
             if name in ['snapshot', 'save', 'noise', 'load']:
                 result = instr_method(params[0])
             else:
                 result = instr_method(*params, *qubits, *clbits)
-            if 'condition' in n and n['condition']:
-                result.c_if(*n['condition'])
+            if node['condition']:
+                    result.c_if(*node['condition'])
     return circuit
