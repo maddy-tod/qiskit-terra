@@ -73,6 +73,7 @@ def pass_manager_drawer(pass_manager, filename, style=None):
 
     # create the overall graph
     graph = pydot.Dot()
+    graph.set_fontname('helvetica')
 
     # identifiers for nodes need to be unique, so assign an id
     # can't just use python's id in case the exact same pass was
@@ -87,7 +88,7 @@ def pass_manager_drawer(pass_manager, filename, style=None):
         label = controller_group['type'].__name__.replace('Controller', '')
 
         # create the subgraph for this controller
-        subgraph = pydot.Cluster(str(id(controller_group)), label=label)
+        subgraph = pydot.Cluster(str(id(controller_group)), label=label, fontname='helvetica')
 
         for pass_ in controller_group['passes']:
 
@@ -95,7 +96,8 @@ def pass_manager_drawer(pass_manager, filename, style=None):
             node = pydot.Node(str(node_id),
                               label=str(type(pass_).__name__),
                               color=_get_node_color(pass_, style),
-                              shape="rectangle")
+                              shape="rectangle",
+                              fontname='helvetica')
 
             subgraph.add_node(node)
             node_id += 1
@@ -119,7 +121,9 @@ def pass_manager_drawer(pass_manager, filename, style=None):
                                         color="black",
                                         shape="ellipse",
                                         fontsize=10,
-                                        style=nd_style)
+                                        style=nd_style,
+                                        fontname='helvetica')
+
                 subgraph.add_node(input_node)
                 node_id += 1
                 subgraph.add_edge(pydot.Edge(input_node, node))
